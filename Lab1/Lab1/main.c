@@ -144,20 +144,18 @@ void LCD_blinkinit(void){
 	
 }
 
-void LCD_blink(void){
-	LCD_blinkinit();
-	for(int i = 0; i<100; i++){
-		LCDDR3 = 0x1;
-		LCDDR8 = 0x1;
-		LCDDR13 = 0x1;
-		LCDDR18 = 0x1;
-		_delay_ms(5000); 
-		LCDDR3 = 0x0;
-		LCDDR8 = 0x0;
-		LCDDR13 = 0x0;
-		LCDDR18 = 0x0;
-		_delay_ms(5000); 
-	}
+void LCD_colon_ON(void){
+	LCDDR3 = 0x1;
+	LCDDR8 = 0x1;
+	LCDDR13 = 0x1;
+	LCDDR18 = 0x1;
+}
+
+void LCD_colon_OFF(void){
+	LCDDR3 = 0x0;
+	LCDDR8 = 0x0;
+	LCDDR13 = 0x0;
+	LCDDR18 = 0x0;
 }	
 
 int main(void)
