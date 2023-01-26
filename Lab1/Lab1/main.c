@@ -1,10 +1,3 @@
-/*
- * Lab1.c
- *
- * Created: 2023-01-19 22:34:55
- * Author : leorb
- */ 
-
 #include <avr/io.h>
 #include <util/delay.h>
 #include <string.h>
@@ -18,6 +11,7 @@
 #define _PROTECTED_WRITE(register, value);
 
 
+
 void USART1_init(void)
 {
 	_PROTECTED_WRITE(CLKPR, 0x80);
@@ -25,28 +19,35 @@ void USART1_init(void)
 }
 
 void LCD_Init(void)
-    {
+{
 
-    LCDCRB = (1<<LCDCS) | (1<<LCDMUX1)| (1<<LCDMUX0) |(1<<LCDPM2) | (1<<LCDPM1) | (1<<LCDPM0);
+	LCDCRB = (1<<LCDCS) | (1<<LCDMUX1)| (1<<LCDMUX0) |(1<<LCDPM2) | (1<<LCDPM1) | (1<<LCDPM0);
 
-    LCDFRR = (0<<LCDPS2) | (1<<LCDCD2) | (1<<LCDCD1) | (1<<LCDCD0);
-    
-    LCDCCR = (1<<LCDCC3) | (1<<LCDCC2) | (1<<LCDCC1) | (1<<LCDCC0);
-    
-    LCDCRA =  (1<<LCDEN); // LCDCRA |= 0x80 ----> ENABLE DISPLAY!
+	LCDFRR = (0<<LCDPS2) | (1<<LCDCD2) | (1<<LCDCD1) | (1<<LCDCD0);
+	
+	LCDCCR = (1<<LCDCC3) | (1<<LCDCC2) | (1<<LCDCC1) | (1<<LCDCC0);
+	
+	LCDCRA =  (1<<LCDEN); // LCDCRA |= 0x80 ----> ENABLE DISPLAY!
+}
+
+void TIMER_init(void){
+	DDRD |= (1<<LCDEN) ;         //configure led as outpout
+	TCCR1B = (1<<CS12); //set the pre-scalar as 256
+	OCR1A = 31248; 	   //ms delay 15625 for 500ms delay
+	TCNT1 = 0;
 }
 
 int16_t sourceCodeCharacter[10]={
-        0x1551, //0
-        0x0118, //1
-        0x1e11, //2
-        0x1b11, //3
-        0x0b50, //4
-        0x1b41, //5
-        0x1f41, //6
-        0x4009, //7
-        0x1f51, //8
-        0x1b51 //9
+	0x1551, //0
+	0x0118, //1
+	0x1e11, //2
+	0x1b11, //3
+	0x0b50, //4
+	0x1b41, //5
+	0x1f41, //6
+	0x4009, //7
+	0x1f51, //8
+	0x1b51 //9
 };
 
 void writeChar(char ch, uint8_t pos)
@@ -96,25 +97,25 @@ void writeLong(long i){
 	unsigned int size_needed = 1; // For the null character.
 	if (value_copy < 0) size_needed++; // Only needed for signed types.
 	do {
-	size_needed++; // Add 1 per digit.
-	value_copy /= 10;
+		size_needed++; // Add 1 per digit.
+		value_copy /= 10;
 	} while (value_copy != 0);
 
 	char str[size_needed];
 	sprintf(str, "%ld", i);
-	output(str, size_needed-1);	
+	output(str, size_needed-1);
 }
 
 int is_prime(long i){
-   int c;
-   for (c = 2; c <= i - 1; c++)
-   {
-      if (i%c == 0)
-     return 0;
-   }
-   if (c == i)
-      return 1;
-} 
+	int c;
+	for (c = 2; c <= i - 1; c++)
+	{
+		if (i%c == 0)
+		return 0;
+	}
+	if (c == i)
+	return 1;
+}
 
 void output(char arr[], int length)
 {
@@ -141,36 +142,67 @@ void primes(void){
 }
 
 void LCD_blinkinit(void){
-	
+	//CSn2:1 = 1;
+	TCNT1; 
 }
 
 void LCD_colon_ON(void){
-	LCDDR3 = 0x1;
 	LCDDR8 = 0x1;
-	LCDDR13 = 0x1;
-	LCDDR18 = 0x1;
 }
 
 void LCD_colon_OFF(void){
-	LCDDR3 = 0x0;
 	LCDDR8 = 0x0;
-	LCDDR13 = 0x0;
-	LCDDR18 = 0x0;
-}	
+}
+
+void timer_init(void){
+	PORTA |= (1<<LCDEN); // this represent the LED portA as output
+	TCCR1B = (1<<CS12); //pre-scaling factor to (1<<CS12) | (1<<CS10) ---> 1024mHz
+}
+
+void blink(void){
+	uint16_t nextTimerValue;
+	timer_init();
+	nextTimerValue = ((8000000/256)/1);
+	while(1){
+		uint16_t timeNow = TCNT1;
+		while (TCNT1 >= nextTimerValue )
+		{
+			LCDDR8 = 0x1; // ON
+		}
+		while (TCNT1 <= nextTimerValue ){
+			LCDDR8 = 0x0; // OFF	
+		}
+	}
+}
+void button_init(void){
+	PORTB = (1<<PB7);
+	DDRB = (1<<DDB3)|(1<<DDB2)|(1<<DDB1)|(1<<DDB0);
+}
+
+void button(void){
+	while(1){
+	while (PINB & (1<<PB7))
+	{
+		LCDDR13 = 0x1;
+		LCDDR18 = 0x0;
+	}
+		LCDDR13 = 0x0;
+		LCDDR18 = 0x1;
+	}
+}
 
 int main(void)
 {
 	USART1_init();
 	LCD_Init();
-		char arr[10] = "0123455555";
-		int length = sizeof(arr)/sizeof(arr[0]);
-		//output(arr, length);
-		//_delay_ms(10000); //delay 0.5 sec
-		clearLCD();
-		//writeLong(12345678);
-		//_delay_ms(50000); //delay 0.5 sec
-		primes();
-		LCD_blink();	
-	
-return 0;
+	button_init();
+	while(1){
+	button();
+	char arr[10] = "0123455555";
+	int length = sizeof(arr)/sizeof(arr[0]);
+	clearLCD();
+	primes();
+	blink();
+	return 0;
+}
 }
