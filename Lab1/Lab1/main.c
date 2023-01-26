@@ -139,14 +139,21 @@ void output(char arr[], int length)
 */
 long primes(long number){
 	int i = 1;
+	int adder = 1; 
 	int primeFound = 0;
+	
+	if(number % 2 != 0){
+		i = 2;
+		adder = 2;
+	}
+	
 	while (primeFound == 0){
 		if(is_prime(number+i) == 1) {
 			primeFound = 1;
 			writeLong(number+i);
 			return (number+i);
 		}
-		i++;
+		i=i+adder; // if number is NOT dividable by two this is better optimized
 	}
 }
 
@@ -160,41 +167,12 @@ int toggle(int state){
 		return 0;
 	}
 }
-/*					Old blink now we use a combination of toggle() and main
-void blink(void){
-	uint16_t nextTimerValue;
-	timer_init();
-	nextTimerValue = ((8000000/256)/1);
-	while(1){
-		uint16_t timeNow = TCNT1;
-		while (TCNT1 >= nextTimerValue )
-		{
-			LCDDR8 = 0x1; // ON
-		}
-		while (TCNT1 <= nextTimerValue ){
-			LCDDR8 = 0x0; // OFF	
-		}
-	}
-}
-*/
+
 void button_init(void){
 	PORTB = (1<<PB7);
 	DDRB = (1<<DDB3)|(1<<DDB2)|(1<<DDB1)|(1<<DDB0);
 }
 
-/*						Not needed programed into main
-void button(void){
-	while(1){
-	while (PINB & (1<<PB7))
-	{
-		LCDDR13 = 0x1;
-		LCDDR18 = 0x0;
-	}
-		LCDDR13 = 0x0;
-		LCDDR18 = 0x1;
-	}
-}
-*/
 int main(void)
 {
 	USART1_init();
@@ -202,14 +180,13 @@ int main(void)
 	button_init();
 	uint16_t nextTimerValue;
 	uint8_t state = 0;			// set start state
-	uint16_t prime = 250;		// set first prime
+	uint16_t prime = 25000;		// set first prime
 	uint8_t cykleState = 0;		
 	uint8_t buttonPress = 0;
 	timer_init();
 	nextTimerValue = ((8000000/256)/1);		// calculate the clock time for 1Hz
-	TCNT1 = 0;
 	while(1){
-		while (TCNT1 >= nextTimerValue )
+		while (TCNT1*2 < nextTimerValue)
 		{
 			if (cykleState == 0) {
 				state = toggle(state);
@@ -232,7 +209,7 @@ int main(void)
 			}
 		}
 		clearLCD();
-		while (TCNT1 <= nextTimerValue )
+		while (TCNT1*2 >= nextTimerValue)
 		{
 			if (cykleState == 1) {
 				state = toggle(state);
