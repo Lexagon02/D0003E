@@ -11,7 +11,6 @@
 #define _PROTECTED_WRITE(register, value);
 
 
-
 void USART1_init(void)
 {
 	_PROTECTED_WRITE(CLKPR, 0x80);
@@ -30,11 +29,9 @@ void LCD_Init(void)
 	LCDCRA =  (1<<LCDEN); // LCDCRA |= 0x80 ----> ENABLE DISPLAY!
 }
 
-void TIMER_init(void){
-	DDRD |= (1<<LCDEN) ;         //configure led as outpout
-	TCCR1B = (1<<CS12); //set the pre-scalar as 256
-	OCR1A = 31248; 	   //ms delay 15625 for 500ms delay
-	TCNT1 = 0;
+void timer_init(void){
+	PORTA |= (1<<LCDEN); // this represent the LED portA as output
+	TCCR1B = (1<<CS12); //pre-scaling factor to (1<<CS12) | (1<<CS10) ---> 1024mHz
 }
 
 int16_t sourceCodeCharacter[10]={
@@ -69,6 +66,7 @@ void writeChar(char ch, uint8_t pos)
 		registers.ptr+=5;
 	}
 } // struct
+
 void clearLCD(void){
 	LCDDR0 =0x0;
 	LCDDR5=0x0;
@@ -131,34 +129,38 @@ void output(char arr[], int length)
 		pos++;
 	}
 }
-void primes(void){
-	for(long i=3; i<10000; i++){
-		if(is_prime(i) == 1){
-			writeLong(i);
-			_delay_ms(5000);
-			clearLCD();
+
+/*
+	primes()
+	in primes we removed the delay and clearLCD since function
+	since this will be manged in main. We also return the next prime
+	prime since we need it to keep track of where we are.
+	We don't need the for loop so it's removed.
+*/
+long primes(long number){
+	int i = 1;
+	int primeFound = 0;
+	while (primeFound == 0){
+		if(is_prime(number+i) == 1) {
+			primeFound = 1;
+			writeLong(number+i);
+			return (number+i);
 		}
+		i++;
 	}
 }
 
-void LCD_blinkinit(void){
-	//CSn2:1 = 1;
-	TCNT1; 
+int toggle(int state){
+	if(state == 0) { // if OFF
+		LCDDR8 = 0x1; // ON
+		return 1;
+	}
+	else{			// if ON
+		LCDDR8 = 0x0; // OFF
+		return 0;
+	}
 }
-
-void LCD_colon_ON(void){
-	LCDDR8 = 0x1;
-}
-
-void LCD_colon_OFF(void){
-	LCDDR8 = 0x0;
-}
-
-void timer_init(void){
-	PORTA |= (1<<LCDEN); // this represent the LED portA as output
-	TCCR1B = (1<<CS12); //pre-scaling factor to (1<<CS12) | (1<<CS10) ---> 1024mHz
-}
-
+/*					Old blink now we use a combination of toggle() and main
 void blink(void){
 	uint16_t nextTimerValue;
 	timer_init();
@@ -174,11 +176,13 @@ void blink(void){
 		}
 	}
 }
+*/
 void button_init(void){
 	PORTB = (1<<PB7);
 	DDRB = (1<<DDB3)|(1<<DDB2)|(1<<DDB1)|(1<<DDB0);
 }
 
+/*						Not needed programed into main
 void button(void){
 	while(1){
 	while (PINB & (1<<PB7))
@@ -190,19 +194,67 @@ void button(void){
 		LCDDR18 = 0x1;
 	}
 }
-
+*/
 int main(void)
 {
 	USART1_init();
 	LCD_Init();
 	button_init();
+	uint16_t nextTimerValue;
+	uint8_t state = 0;			// set start state
+	uint16_t prime = 250;		// set first prime
+	uint8_t cykleState = 0;		
+	uint8_t buttonPress = 0;
+	timer_init();
+	nextTimerValue = ((8000000/256)/1);		// calculate the clock time for 1Hz
+	TCNT1 = 0;
 	while(1){
-	button();
-	char arr[10] = "0123455555";
-	int length = sizeof(arr)/sizeof(arr[0]);
-	clearLCD();
-	primes();
-	blink();
+		while (TCNT1 >= nextTimerValue )
+		{
+			if (cykleState == 0) {
+				state = toggle(state);
+				prime = primes(prime);
+				cykleState = 1;
+			}	
+			if (PINB & (1<<PB7)) {
+				buttonPress = 1;
+			}
+			if (!(PINB & (1<<PB7))) {
+				buttonPress = 0;
+			}
+			if (buttonPress == 1){
+				LCDDR13 = 0x1;
+				LCDDR18 = 0x0;
+			}
+			if (buttonPress == 0){
+				LCDDR13 = 0x0;
+				LCDDR18 = 0x1;
+			}
+		}
+		clearLCD();
+		while (TCNT1 <= nextTimerValue )
+		{
+			if (cykleState == 1) {
+				state = toggle(state);
+				prime = primes(prime);
+				cykleState = 0;
+			}
+			if (PINB & (1<<PB7)) {
+				buttonPress = 1;
+			}
+			if (!(PINB & (1<<PB7))) {
+				buttonPress = 0;
+			}
+			if (buttonPress == 1){
+				LCDDR13 = 0x1;
+				LCDDR18 = 0x0;
+			}
+			if (buttonPress == 0){
+				LCDDR13 = 0x0;
+				LCDDR18 = 0x1;
+			}
+		}
+		clearLCD();
+	}
 	return 0;
-}
 }
