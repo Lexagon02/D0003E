@@ -168,6 +168,17 @@ int toggle(int state){
 	}
 }
 
+void toggleButton(void){
+	if(LCDDR13 == 0) { // if OFF
+		LCDDR13 = 0x1; // ON
+		LCDDR18 = 0x0;
+	}
+	else{			// if ON
+		LCDDR13 = 0x0; // OFF
+		LCDDR18 = 0x1;
+	}
+}
+
 void button_init(void){
 	PORTB = (1<<PB7);
 	DDRB = (1<<DDB3)|(1<<DDB2)|(1<<DDB1)|(1<<DDB0);
@@ -180,13 +191,15 @@ int main(void)
 	button_init();
 	uint16_t nextTimerValue;
 	uint8_t state = 0;			// set start state
-	uint16_t prime = 25000;		// set first prime
+	uint16_t prime = 2500;		// set first prime
 	uint8_t cykleState = 0;		
 	uint8_t buttonPress = 0;
+	uint8_t ON = 0;
 	timer_init();
-	nextTimerValue = ((8000000/256)/1);		// calculate the clock time for 1Hz
+	nextTimerValue = ((8000000/256)/2);		// calculate the clock time for 1Hz
+	uint16_t wrapValue = nextTimerValue*2;
 	while(1){
-		while (TCNT1*2 < nextTimerValue)
+		while (TCNT1 <= nextTimerValue)
 		{
 			if (cykleState == 0) {
 				state = toggle(state);
@@ -194,22 +207,29 @@ int main(void)
 				cykleState = 1;
 			}	
 			if (PINB & (1<<PB7)) {
-				buttonPress = 1;
+				if(buttonPress == 0){
+					buttonPress = 1;
+					toggleButton();
+				}
 			}
+			
 			if (!(PINB & (1<<PB7))) {
 				buttonPress = 0;
-			}
+			/*
 			if (buttonPress == 1){
 				LCDDR13 = 0x1;
 				LCDDR18 = 0x0;
 			}
+			
 			if (buttonPress == 0){
 				LCDDR13 = 0x0;
 				LCDDR18 = 0x1;
 			}
+			*/
+			
 		}
-		clearLCD();
-		while (TCNT1*2 >= nextTimerValue)
+		//clearLCD();
+		while (TCNT1 >= nextTimerValue)
 		{
 			if (cykleState == 1) {
 				state = toggle(state);
@@ -217,11 +237,15 @@ int main(void)
 				cykleState = 0;
 			}
 			if (PINB & (1<<PB7)) {
-				buttonPress = 1;
+				if(buttonPress == 0){
+					buttonPress = 1;
+					toggleButton();
+				}
 			}
 			if (!(PINB & (1<<PB7))) {
 				buttonPress = 0;
 			}
+			/*
 			if (buttonPress == 1){
 				LCDDR13 = 0x1;
 				LCDDR18 = 0x0;
@@ -230,8 +254,14 @@ int main(void)
 				LCDDR13 = 0x0;
 				LCDDR18 = 0x1;
 			}
+			*/
+			if (TCNT1 >= wrapValue){
+				TCNT1 = 0;
+			}
 		}
-		clearLCD();
+		//clearLCD();
+		
 	}
 	return 0;
 }
+	}
