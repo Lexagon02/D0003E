@@ -1,4 +1,5 @@
 #include "tinythreads.h"
+#include "tinythreads.c"
 #include <stdbool.h>
 
 void writeChar(char ch, int pos); // from lab 1
